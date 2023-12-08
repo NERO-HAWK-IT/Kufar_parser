@@ -51,9 +51,9 @@ def get_html_page(key_page:str, name_json:str):
     with open(f'{name_json}.json', 'w', encoding='utf-8') as f:
         f.write(json.dumps(data, ensure_ascii=False, indent=4))  # Преобразуем полученный код в читабельный вид
 
-# get_html_page('eyJ0IjoicmVsIiwiYyI6W3sibiI6Imxpc3RfdGltZSIsInYiOjE2OTY3MTY5NjEwMDB9LHsibiI6ImFkX2lkIiwidiI6MTg3MDMxMzgzfV0sImYiOnRydWUsInAiOjIzN30%3D', 'test_last')
+# get_html_page('eyJ0IjoiYWJzIiwiZiI6dHJ1ZSwicCI6MiwicGl0IjoiMjgzNjY4NDIifQ%3D%3D', 'test')
 
-def get_pages_link(first_page:str):
+def get_pages_link(first_page:str)->list:
     list_url=[]
     list_url.append(first_page)
     url_page = first_page
@@ -61,6 +61,7 @@ def get_pages_link(first_page:str):
     pagination = True
     while pagination:
         response = requests.get(url_page, headers=HEADERS)
+        print(response.status_code)
         soup = BeautifulSoup(response.text, 'lxml').find('script', id='__NEXT_DATA__').text
         data = json.loads(soup)['props']['initialState']['listing']['pagination']
         number_page += 1
@@ -73,76 +74,56 @@ def get_pages_link(first_page:str):
                 url_page = link_page
             elif data[len(data) - 1]['num'] < number_page:
                 pagination = False
-
     return list_url
 
-pprint(get_pages_link('https://www.kufar.by/l/noutbuki?cursor=eyJ0IjoiYWJzIiwiZiI6dHJ1ZSwicCI6MX0%3D'))
+def get_items_links(list_url: list)->list:
+    item_url = []
+    for page in tqdm(list_url, desc='Parsing items url'):
+        responce = requests.get(page, headers=HEADERS)
+        soup = BeautifulSoup(responce.text, 'lxml')
+        link =soup.find_all('a', {'class': 'styles_wrapper__5FoK7', 'data-testid' : True})
+        urls = [el["href"] for el in link]
+        item_url.extend(urls)
+    return item_url
+
+# get_items_links()
+
+def get_items_data(item_url: list):
+    items = []
+    for link in tqdm(item_url, desc='Parsing items data'):
+        response = requests.get(link, headers=HEADERS)
+        soup = BeautifulSoup(response.text, 'lxml')
+        item_id =link.split('/')[4].split('?')[0]
+        print(item_id)
+        try:
+            title = soup.find('h1', class_='styles_brief_wrapper__title__Ksuxa').text
+        except:
+            title = ''
+        print(title)
+        try:
+            price = soup.find('span', class_='styles_main__eFbJH').text.replace(' ','').replace('р.','')
+        except:
+            price = ''
+        print(price)
+        try: #Доделать
+            picture = soup.find_all('img', class_='styles_slide__image__YIPad styles_slide__image__vertical__QdnkQ')
+        except:
+            picture = ''
+        print(picture)
 
 
 
+get_items_data(['https://www.kufar.by/item/213034294?rank=179&searchId=ed8292ef2738caf616ecd888dc74f2d4ed3a'])
+def run_parser():
+    pagination = get_pages_link('https://www.kufar.by/l/noutbuki?cursor=eyJ0IjoiYWJzIiwiZiI6dHJ1ZSwicCI6MX0%3D')
+    item_links = get_items_links(pagination)
+    pprint(item_links)
+    print(len(item_links))
+    li = []
+    [li.append(x) for x in item_links if x not in li]
+    print(len(li))
 
-
-# def get_flat_data(ad_link: str, parametrs: dict) -> dict:
-#     """Функция сбора данных по одному объявлению"""
-#     flat = parametrs.copy()
-#     code_params = {'item_id': 'ad_id',
-#                     'title': 'subject',
-#                     'price': 'price_usd',
-#                     'picture': 'path',
-#                     'discription': '',
-#                     'manufacturer': 'computers_laptop_brand',
-#                     'screen_diagonal': 'computers_laptop_diagonal',
-#                     'screen_resolution': 'computers_laptop_resolution',
-#                     'operating_system': 'computers_laptop_os',
-#                     'processor': 'computers_laptop_processor',
-#                     'ram': 'computer_equipment_laptops_ram',
-#                     'video_card_type': 'computers_laptop_videocard',
-#                     'video_card': 'computers_laptop_videocard_brand',
-#                     'storage_type': 'computers_laptop_hdd_type',
-#                     'storage_capacity': 'computers_laptop_hdd_volume',
-#                     'battery_life': 'computers_laptop_battery_life',
-#                     'status': 'condition'}
-#
-#     for par in code_params:
-#         try:
-#             flat[par] = ad_link[code_params[par]]
-#         except Exception:
-#             flat[par] = ''
-#     try:
-#         flat['coordinates'] = str(flat['coordinates'][0]) + ', ' + str(flat['coordinates'][1])
-#     except Exception:
-#         flat['coordinates'] = ''
-#     try:
-#         flat['picture'] = str(flat['picture'][0])
-#     except Exception:
-#         flat['picture'] = ''
-#     try:
-#         flat['phone_number'] = str(flat['phone_number'][0])
-#     except Exception:
-#         flat['phone_number'] = ''
-#     try:
-#         for tb in dict_house_type:
-#             if tb == flat['type_building']:
-#                 flat['type_building'] = dict_house_type[tb]
-#     except Exception:
-#         flat['type_building'] = ''
-#     return flat
-#     # for flat in tqdm(flats, desc='Parametr_2'): # поиск параметров Район и микрорайон
-#     #         resp = requests.get(f'https://realt.by/sale-flats/object/{flat["flat_id"]}/', headers=HEADERS)
-#     #         sou = BeautifulSoup(resp.text, 'lxml')
-#     #         par2 = sou.find('section',
-#     #                        {'id': 'map', 'class': 'bg-white flex flex-wrap md:p-6 my-4 rounded-md'}).find_all('li',
-#     #                                                                                                           class_='relative py-1')
-#     #         for par in par2:
-#     #             try:
-#     #                 key = par.find('span').text
-#     #             except Exception as e:
-#     #                 key = ''
-#     #             if key == 'Район города':
-#     #                 flat['district'] = par.find('a').text
-#     #             if key == 'Микрорайон':
-#     #                 flat['microdistrict'] = par.find('a').text
-#     # pprint(flats)
+# run_parser()
 
 class Laptop():
     def __init__(self):
