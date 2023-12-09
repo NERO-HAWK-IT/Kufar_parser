@@ -82,7 +82,7 @@ def get_items_links(list_url: list)->list:
         responce = requests.get(page, headers=HEADERS)
         soup = BeautifulSoup(responce.text, 'lxml')
         link =soup.find_all('a', {'class': 'styles_wrapper__5FoK7', 'data-testid' : True})
-        urls = [el["href"] for el in link]
+        urls = [el["href"].split('?')[0] for el in link]
         item_url.extend(urls)
     return item_url
 
@@ -95,21 +95,54 @@ def get_items_data(item_url: list):
         soup = BeautifulSoup(response.text, 'lxml')
         item_id =link.split('/')[4].split('?')[0]
         print(item_id)
+        pars_list = {'title': ['h1', {'class':'styles_brief_wrapper__title__Ksuxa'}],
+                    'price': ['span', {'class':'styles_main__eFbJH'}],
+                    'picture': ['img', {'class':'styles_slide__image__YIPad styles_slide__image__vertical__QdnkQ'}],
+                    'discription': ['div',{'itemprop':'description'}],
+                    'manufacturer': ['',{'':''}],
+                    'screen_diagonal': ['',{'':''}],
+                    'screen_resolution': ['',{'':''}],
+                    'operating_system': ['',{'':''}],
+                    'processor': ['',{'':''}],
+                    'ram': ['',{'':''}],
+                    'video_card_type': ['',{'':''}],
+                    'video_card': ['',{'':''}],
+                    'storage_type': ['',{'':''}],
+                    'storage_capacity': ['',{'':''}],
+                    'battery_life': ['',{'':''}],
+                    'status': ['',{'':''}]}
+        # for el in pars_list:
+        #     try:
+        #         print(soup.find(pars_list[el][0], pars_list[el][1]))
+        #     except:
+        #         print('not')
+
         try:
-            title = soup.find('h1', class_='styles_brief_wrapper__title__Ksuxa').text
+            param = soup.find('div', class_='styles_parameter_value__BkYDy').text
         except:
-            title = ''
-        print(title)
-        try:
-            price = soup.find('span', class_='styles_main__eFbJH').text.replace(' ','').replace('р.','')
-        except:
-            price = ''
-        print(price)
-        try: #Доделать
-            picture = soup.find_all('img', class_='styles_slide__image__YIPad styles_slide__image__vertical__QdnkQ')
-        except:
-            picture = ''
-        print(picture)
+            param = ''
+        print(param)
+        raw_params = soup.find_all('div',class_='styles_parameter_block__QBI2S undefined')
+        pprint(raw_params)
+        for par in raw_params:
+
+            key = par.find('div', class_='styles_parameter_label__i_OkS').text
+            value = par.find('a').text
+            print(key)
+            print(value)
+
+
+        # try:
+        #     price = soup.find('span', class_='styles_main__eFbJH').text.replace(' ','').replace('р.','')
+        # except:
+        #     price = ''
+        # print(price)
+        # try: #Доделать
+        #     picture = soup.find_all('img', class_='styles_slide__image__YIPad styles_slide__image__vertical__QdnkQ')
+        # except:
+        #     picture = ''
+        # print(picture)
+
 
 
 
