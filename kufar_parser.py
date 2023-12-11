@@ -27,7 +27,7 @@ class ParserNotebook:
         """
         Функция сбора ссылок страниц.
         :param url_first_page: url первой страницы
-        :return: аозвращает список ссылок страниц
+        :return: возвращает список ссылок страниц
         """
         list_urls = []
         list_urls.append(url_first_page)
@@ -50,7 +50,12 @@ class ParserNotebook:
         return list_urls
 
     @staticmethod
-    def get_item_links(self, soup: BeautifulSoup) -> list:
+    def get_item_links(soup: BeautifulSoup) -> list:
+        """
+        Функция сбора ссылок объявлений с каждой страницы раздела
+        :param soup: BeautifulSoup страницы раздела
+        :return: возвращает список urls объявлений
+        """
         links = soup.find_all('a', {'class': 'styles_wrapper__5FoK7', 'data-testid': True})
         # далее выбираем ссылки тех объявлений у которых есть стоимость.
         # (span - тег поля стоимости, href атрибут забираем сслыку)
@@ -58,8 +63,14 @@ class ParserNotebook:
                  el.find('span').text.replace(' ', '').replace('р.', '').isdigit()]
         return links
 
-    def get_data(self, soup: BeautifulSoup) -> None:
-
+    def get_data(self, soup: BeautifulSoup) -> tuple:
+        """
+        Функция сбора данный по объявлениям
+        :param soup: BeautifulSoup страницы объявления
+        :return: возвращает кортеж с данными
+        """
+        # Задаем параметрический словарь где ключь это data-name исз кода страницы, а значение это название переменной
+        # в датаклассе и в БД
         pars_list = {'computers_laptop_brand': 'manufacturer',
                      'computers_laptop_diagonal': 'screen_diagonal',
                      'computers_laptop_resolution': 'screen_resolution',
@@ -105,8 +116,21 @@ class ParserNotebook:
                                            0].text)
             except:
                 continue
+        return models.astuple(advert)
 
-        # print(advert.__dict__)
+    def runner(self, start_url):
+        # start_url задается в день парсинга, т.к. cursor динамичный и изменяется ежедневно
+        links = self.get_page_links(start_url)
 
-s = ParserNotebook.get_soup('https://www.kufar.by/item/217362762')
-pprint(ParserNotebook.get_data(s))
+        # Задаем список для сохранения данных
+        data_items = list
+
+        # Собираем сслыки всех объявлений
+        for link in tqdm(links, desc='Load item links:'):
+            soup = self.get_soup(link)
+            item_page_links = self.get_item_links(soup)
+            # Собираем данные с объявлений и записываем их в список
+            for item_link in tqdm(item_page_links, desc='Load data:'):
+                soup_item_page = self.get_soup(item_link)
+                item_data = self.get_data(soup_item_page)
+                data_items.append(item_data) # проанализировать, есть смысл построчно грузить в БД!!!
