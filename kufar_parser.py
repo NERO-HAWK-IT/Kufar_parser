@@ -3,6 +3,7 @@ import json
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 import models
+import DB_client
 from pprint import pprint
 
 
