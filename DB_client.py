@@ -1,6 +1,6 @@
 import psycopg2  # библиотека необходимая для работы с PostgreSQL
 from psycopg2 import extras
-from environs import Env
+from environs import Env # для тестирования DB_client
 
 env = Env()
 env.read_env()  # Чтение аргументов подключения к БД
@@ -72,13 +72,13 @@ class DB_Postgres:
         except (Exception, psycopg2.Error) as error:
             self.__error(error)
 
-    def update_query(self, query: str, data: tuple = None, many=False, message='OK'):
+    def update_query(self, query: str, data: [tuple | list] = None, many=False, message='OK'):
         """
         Функция для обновления данных в БД.
         :param query: запрос
         :param data: данные
-        :param many:
-        :param message:
+        :param many: тригер указывающий сколько записей мы будем загружать в БД True - много, False - одну
+        :param message: Сообщение о результате выполнения запроса, по умолчанию "ОК"
         :return:
         """
         try:
@@ -92,7 +92,7 @@ class DB_Postgres:
         """
         Функция для подключения к БД
         :param factory: в каком виде функция примает параметры:
-        1. словарь; 2. список - соответственно в аналогичном формате будет выводиться курсор
+        1. словарь; 2. список 3. кортеж - соответственно в аналогичном формате будет выводиться курсор
         :return: возвращает курсор (cursor)
         """
         # Передаем необходимые параметры для подключения к БД
@@ -104,7 +104,7 @@ class DB_Postgres:
             port=self.__port
         )
         connection.autocommit = True  # комит всех сохранений
-        # определяем курсор в зависимости от в каком виде нам приходят данные
+        # определяем курсор в зависимости от того в каком виде нам приходят данные
         # (курсор делает запросы и получает их результаты)
         if factory == 'dict':
             cursor = connection.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -122,7 +122,7 @@ class DB_Postgres:
         :param cursor: курсор
         :param query: запрос
         :param argument: аргументы
-        :param many:
+        :param many: тригер указывающий сколько записей мы будем загружать в БД True - много, False - одну
         :return:
         """
         if many:
@@ -141,7 +141,7 @@ class DB_Postgres:
         """
         Функция для получения  данных из БД.
         :param cursor: курсор
-        :param clean:
+        :param clean: тригер позволяющий вернуть
         :return:
         """
         if clean is None:
@@ -160,7 +160,5 @@ class DB_Postgres:
         """
         print(error)
 
+# db = DB_Postgres(db_name, db_user, db_password, db_host, db_port)
 
-db = DB_Postgres(db_name, db_user, db_password, db_host, db_port)
-d = db.fetch_all("""SELECT * FROM test""")
-print(d)
