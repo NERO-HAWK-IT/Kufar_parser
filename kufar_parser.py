@@ -148,7 +148,7 @@ class ParserNotebook:
 
     def runner(self):
         # url страницы с которой начинается парсинг
-        url = 'https://www.kufar.by/l/noutbuki'
+        url = 'https://www.kufar.by/l/r~minsk/noutbuki'
         flag = True
         while flag:
             links_and_token = self.__get_item_links(self.get_soup(url))
@@ -161,8 +161,52 @@ class ParserNotebook:
             token = links_and_token[1]
             if not token:
                 flag = False
-            url = f'https://www.kufar.by/l/noutbuki?cursor={token}'
+            url = f'https://www.kufar.by/l/r~minsk/noutbuki?cursor={token}'
+
+    def run_updater(self):
+        url = 'https://www.kufar.by/l/r~minsk/noutbuki'
+        links_db = self.DB.fetch_all("""SELECT url FROM data_laptops""", factory='list')
+        links_db = [el[0] for el in links_db]
+        flag = True
+        links_now = []
+        #Получение и сохранение данных по новыым объявлениям
+        while flag:
+            links_and_token = self.__get_item_links(self.get_soup(url))
+            links = links_and_token[0]
+            for link in links:
+                if link not in links_db:
+                    laptop = []
+                    soup = self.get_soup(link)
+                    laptop.append(self.__get_data(soup, link))
+                    self.save_data(laptop)
+            links_now.extend(links)
+            token = links_and_token[1]
+            if not token:
+                flag = False
+            url = f'https://www.kufar.by/l/r~minsk/noutbuki?cursor={token}'
+        #Удаление данных по закрытым объявлениям
+        del_link = []
+        for link in links_db:
+            if link not in links_now:
+                del_link.append(link)
+            else:
+                continue
+        del_link = [tuple(el.split()) for el in del_link]
+        print(del_link)
+        self.DB.update_query("""
+        INSERT INTO data_laptops_fake(new_url)
+        VALUES (%s)""", del_link, many=True)
+        self.DB.update_query("""
+        DELETE FROM data_laptops
+        WHERE EXISTS(
+        SELECT 1 FROM data_laptops_fake
+        WHERE data_laptops_fake.new_url = data_laptops.url)""")
+        self.DB.update_query("""truncate data_laptops_fake""")
+
+
 
 
 laptot = ParserNotebook()
-laptot.runner()
+laptot.run_updater()
+
+
